@@ -1,0 +1,63 @@
+# Зависимости между задачами (needs)
+name: Pipeline with Dependencies
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+jobs:
+  # Этап 1: Линтинг (проверка стиля)
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run linter
+        run: |
+          pip install flake8
+          flake8 src/ --max-line-length=120
+      - name: Lint result
+        run: echo "✅ Линтинг пройден"
+  # Этап 2: Тесты (зависит от lint)
+  test:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run tests
+        run: pytest test_hello.py -v
+      - name: Test result
+        run: echo "✅ Тесты пройдены"
+  # Этап 3: Деплой (зависит от test)
+  deploy:
+    needs: [lint, test]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy
+        run: |
+          echo "🚀 Деплой на продакшен..."
+          echo "Версия: $(git rev-parse --short HEAD)"
+          echo "✅ Деплой завершён"
+  # Этап 4: Уведомление (запускается всегда)
+  notify:
+    needs: [lint, test, deploy]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Notify about pipeline status
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "🎉 Всё успешно!"
+          else
+            echo "❌ Что-то пошло не так"
+          fi
