@@ -1,0 +1,50 @@
+# Продвинутая матрица из лекции 5
+name: Advanced Matrix
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+jobs:
+  cross-platform-test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: ['3.10', '3.11', '3.12']
+        # exclude: убираем конфликтные комбинации
+        exclude:
+          - os: windows-latest
+            python: '3.12'
+          - os: macos-latest
+            python: '3.10'
+        # include: добавляем экспериментальную комбинацию
+        include:
+          - os: ubuntu-latest
+            python: '3.12'
+            experimental: true
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      
+      - name: Run tests
+        run: pytest test_hello.py -v
+      
+      - name: Report
+        run: |
+          echo "🖥️ ОС: ${{ matrix.os }}"
+          echo "🐍 Python: ${{ matrix.python }}"
+          echo "🧪 Экспериментальный: ${{ matrix.experimental || 'нет' }}"
+      
+      - name: Experimental (do not fail)
+        if: matrix.experimental == true
+        continue-on-error: true
+        run: echo "⚠️ Экспериментальная комбинация, ошибка не страшна"
