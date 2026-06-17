@@ -1,0 +1,32 @@
+# Матричный билд из лекции 5
+name: Matrix Build
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+jobs:
+  test-matrix:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false      # не останавливать все при одной ошибке
+      max-parallel: 4       # не больше 4 параллельных
+      matrix:
+        python: ['3.9', '3.10', '3.11', '3.12']
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      
+      - name: Run tests on Python ${{ matrix.python }}
+        run: pytest test_hello.py -v
+      
+      - name: Results
+        run: |
+          echo "✅ Тесты на Python ${{ matrix.python }} пройдены!"
