@@ -1,0 +1,39 @@
+# Шардинг тестов из лекции 5
+name: Sharding Tests
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+jobs:
+  sharded-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]   # 4 части (шарда)
+    env:
+      SHARDS: 4
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      
+      - name: Run shard ${{ matrix.shard }}
+        env:
+          SHARD: ${{ matrix.shard }}
+        run: |
+          echo "Запуск шарда $SHARD из $SHARDS"
+          files=$(find tests -name "test_*.py" | sort)
+          list=$(echo "$files" | awk "NR%$SHARDS==${SHARD}")
+          if [ -z "$list" ]; then
+            echo "Нет тестов для шарда $SHARD"
+            exit 0
+          fi
+          echo "Тестов для запуска: $list"
+          pytest -v $list
